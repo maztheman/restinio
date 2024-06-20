@@ -16,7 +16,7 @@ auto
 make_dummy_endpoint()
 {
 	return restinio::endpoint_t{
-			restinio::asio_ns::ip::address::from_string("127.0.0.1"),
+			restinio::asio_ns::ip::make_address("127.0.0.1"),
 			12345u
 	};
 }
@@ -285,7 +285,7 @@ TEST_CASE( "Normal Content-Encoding field with get_if", "[try_parse_field]" )
 			*req,
 			restinio::http_field::content_encoding );
 	if( const auto * v = std::get_if< content_encoding_value_t >(
-			&parse_result ) ) 
+			&parse_result ) )
 	{
 		REQUIRE( std::vector<std::string>{ "utf-8"s } == v->values);
 	}

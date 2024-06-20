@@ -46,127 +46,29 @@ endif()
 
 # --------------------------------------------------------------------
 # Handle ASIO dependency.
-if (RESTINIO_ASIO_SOURCE STREQUAL "standalone")
-    if (RESTINIO_DEP_STANDALONE_ASIO STREQUAL "system")
-        message(STATUS "${RESTINIO_LIBRARY_NAME} target assumes standalone asio is available in system headers")
-    elseif (TARGET asio::asio)
-        target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE asio::asio)
-        message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'asio::asio' target")
-    elseif (asio_INCLUDE_DIRS)
-        target_include_directories(${RESTINIO_LIBRARY_NAME} INTERFACE ${asio_INCLUDE_DIRS})
-        message(STATUS "${RESTINIO_LIBRARY_NAME} target will use asio_INCLUDE_DIRS include dirs: ${asio_INCLUDE_DIRS}")
-    else ()
-        message(FATAL_ERROR
-                "Unable to identify how to depend on standalone ASIO "
-                "Giving up...")
-    endif()
-elseif (RESTINIO_ASIO_SOURCE STREQUAL "boost")
-    if (RESTINIO_DEP_BOOST_ASIO STREQUAL "system")
-        message(STATUS "${RESTINIO_LIBRARY_NAME} target assumes Boost::asio is available in system headers")
-    elseif (TARGET Boost::headers)
-        target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE Boost::headers)
-        message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'Boost::headers' target")
-    elseif (TARGET Boost::asio)
-        target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE Boost::asio)
-        message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'Boost::asio' target")
-    elseif (Boost_INCLUDE_DIRS)
-        target_include_directories(${RESTINIO_LIBRARY_NAME} INTERFACE ${Boost_INCLUDE_DIRS})
-        message(STATUS "${RESTINIO_LIBRARY_NAME} target will use Boost_INCLUDE_DIRS include dirs: ${Boost_INCLUDE_DIRS}")
-    else ()
-        message(FATAL_ERROR
-                "Unable to identify how to depend on Boost::asio. "
-                "Giving up...")
-    endif ()
-
-    target_compile_definitions(${RESTINIO_LIBRARY_NAME} INTERFACE RESTINIO_USE_BOOST_ASIO)
-else ()
-    message(FATAL_ERROR "Invalid value for RESTINIO_ASIO_SOURCE (${RESTINIO_ASIO_SOURCE})")
-endif ()
+target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE asio::asio)
+message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'asio::asio' target")
 # --------------------------------------------------------------------
 
 # --------------------------------------------------------------------
 # Handle LLHTTP dependency.
-if (RESTINIO_DEP_LLHTTP STREQUAL "system")
-    message(STATUS "Using system llhttp")
-    if (RESTINIO_LLHTTP_LIB_LINK_NAME)
-        message(STATUS "Using system llhttp with linking to custom lib name: ${RESTINIO_LLHTTP_LIB_LINK_NAME}")
-        target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE ${RESTINIO_LLHTTP_LIB_LINK_NAME})
-    else()
-        target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE llhttp)
-    endif()
-elseif (TARGET llhttp::llhttp)
-    target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE llhttp::llhttp)
-    message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'llhttp::llhttp' target")
-elseif (TARGET llhttp::llhttp_static)
-    target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE llhttp::llhttp_static)
-    message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'llhttp::llhttp_static' target")
-elseif (TARGET llhttp::llhttp_dynamic)
-    target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE llhttp::llhttp_dynamic)
-    message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'llhttp::llhttp_dynamic' target")
-else ()
-    message(FATAL_ERROR
-            "Unable to identify how to depend on llhttp. "
-            "Giving up...")
-endif()
+target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE llhttp::llhttp)
+message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'llhttp::llhttp' target")
 # --------------------------------------------------------------------
 
 # --------------------------------------------------------------------
 # Handle FMT dependency.
-if (RESTINIO_DEP_FMT STREQUAL "system")
-    if (RESTINIO_FMT_LIB_LINK_NAME)
-        message(STATUS "Using system fmt with linking to ${RESTINIO_FMT_LIB_LINK_NAME}")
-        # target_compile_definitions(${RESTINIO_LIBRARY_NAME} INTERFACE FMT_HEADER_ONLY=0 )
-        target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE ${RESTINIO_FMT_LIB_LINK_NAME})
-    else()
-        message(STATUS "Using system fmt (assume header-only)")
-        target_compile_definitions(${RESTINIO_LIBRARY_NAME} INTERFACE FMT_HEADER_ONLY=1 )
-    endif()
-elseif (NOT "${RESTINIO_FMT_TARGET}" STREQUAL "" )
-    target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE ${RESTINIO_FMT_TARGET})
-    message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on '${RESTINIO_FMT_TARGET}' target")
-elseif (TARGET fmt::fmt)
-    target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE fmt::fmt)
-    message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'fmt::fmt' target")
-else ()
-    message(FATAL_ERROR
-            "Unable to identify how to depend on FMT. "
-            "Giving up...")
-endif()
+target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE fmt::fmt)
+message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'fmt::fmt' target")
 # --------------------------------------------------------------------
 
 # --------------------------------------------------------------------
 # Handle expected lite dependency.
-if ("${RESTINIO_EXPLICIT_CPPSTD}" STREQUAL "17"
-    OR "${RESTINIO_EXPLICIT_CPPSTD}" STREQUAL "20"
-    OR "CMAKE_CXX_STANDARD" STREQUAL "17"
-    OR "CMAKE_CXX_STANDARD" STREQUAL "20")
-
-    # TODO: Consider expected that comes with C++23.
-    #       In that case the next fragment must be places under a given
-    #       conditional block.
-endif()
-
-if (RESTINIO_DEP_EXPECTED_LITE STREQUAL "system")
-    message(STATUS "Using system expected-lite")
-elseif (TARGET expected-lite::expected-lite)
-    target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE expected-lite::expected-lite)
-    message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'nonstd::expected-lite' target")
-elseif (TARGET nonstd::expected-lite)
-    target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE nonstd::expected-lite)
-    message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'nonstd::expected-lite' target")
-elseif (nonstd_expected-lite_INCLUDE_DIRS)
-    target_include_directories(${RESTINIO_LIBRARY_NAME} INTERFACE ${nonstd_expected-lite_INCLUDE_DIRS})
-    message(STATUS "${RESTINIO_LIBRARY_NAME} target will use nonstd_expected-lite_INCLUDE_DIRS include dirs: ${nonstd_expected-lite_INCLUDE_DIRS}")
-elseif (nonstd_INCLUDE_DIRS)
-    target_include_directories(${RESTINIO_LIBRARY_NAME} INTERFACE ${nonstd_INCLUDE_DIRS})
-    message(STATUS "${RESTINIO_LIBRARY_NAME} target will use nonstd_INCLUDE_DIRS include dirs: ${nonstd_INCLUDE_DIRS}")
-else ()
-    message(FATAL_ERROR
-            "Unable to identify how to depend on nonstd::expected-lite. "
-            "Giving up...")
-endif()
+target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE nonstd::expected-lite)
+message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'nonstd::expected-lite' target")
 # --------------------------------------------------------------------
-
+target_link_libraries(${RESTINIO_LIBRARY_NAME} INTERFACE sobjectizer::StaticLib)
+message(STATUS "${RESTINIO_LIBRARY_NAME} target will depend on 'sobjectizer::StaticLib' target")
 
 if (RESTINIO_INSTALL)
     include(GNUInstallDirs)

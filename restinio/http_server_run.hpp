@@ -680,7 +680,7 @@ template<typename Traits>
 inline void
 initiate_shutdown( http_server_t<Traits> & server )
 {
-	server.io_context().post( [&server] {
+	restinio::asio_ns::post(server.io_context(), [&server] {
 			server.close_sync();
 			server.io_context().stop();
 		} );
@@ -1209,7 +1209,7 @@ run_async(
 	};
 
 	handle->start();
-	
+
 	return handle;
 }
 

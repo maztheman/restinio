@@ -25,6 +25,14 @@ cmake_minimum_required(VERSION 3.14)
 set(RESTINIO_LIBRARY_NAME restinio)
 project(${RESTINIO_LIBRARY_NAME}_root CXX)
 
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.21")
+  # PROJECT_IS_TOP_LEVEL is defined automatically
+elseif (CMAKE_CURRENT_BINARY_DIR STREQUAL CMAKE_BINARY_DIR)
+  set(PROJECT_IS_TOP_LEVEL TRUE)
+else()
+  set(PROJECT_IS_TOP_LEVEL FALSE)
+endif()
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -45,7 +53,7 @@ if (RESTINIO_EXPLICIT_CPPSTD)
                 "invalid RESTINIO_EXPLICIT_CPPSTD (value ='${RESTINIO_EXPLICIT_CPPSTD}')"
                 "must be on of: [17, 20, 23]")
     endif ()
-else()
+elseif(PROJECT_IS_TOP_LEVEL)
     message(STATUS "SET C++17 BY DEFAULT")
     set(CMAKE_CXX_STANDARD 17)
 endif()
@@ -54,8 +62,10 @@ if (NOT RESTINIO_EXPLICIT_WIN32_WINNT)
 	set(RESTINIO_EXPLICIT_WIN32_WINNT "0x0602") # Win8 by default
 endif()
 
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+if(PROJECT_IS_TOP_LEVEL)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+endif()
 
 if (RESTINIO_EXPLICIT_LIBCXX)
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/libcxx.cmake)
@@ -64,11 +74,11 @@ endif()
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/link_threads_if_necessary.cmake")
 
-option(RESTINIO_INSTALL "Generate the install target." ON)
-option(RESTINIO_TEST "Build the tests." ON)
-option(RESTINIO_SAMPLE "Build samples." ON)
-option(RESTINIO_BENCHMARK "Build the benchmarks." ON)
-option(RESTINIO_WITH_SOBJECTIZER "Add RESTinio sobjectizer integration" ON)
+option(RESTINIO_INSTALL "Generate the install target." OFF)
+option(RESTINIO_TEST "Build the tests." ${PROJECT_IS_TOP_LEVEL})
+option(RESTINIO_SAMPLE "Build samples." ${PROJECT_IS_TOP_LEVEL})
+option(RESTINIO_BENCHMARK "Build the benchmarks." ${PROJECT_IS_TOP_LEVEL})
+option(RESTINIO_WITH_SOBJECTIZER "Add RESTinio sobjectizer integration" ${PROJECT_IS_TOP_LEVEL})
 
 message(STATUS "RESTINIO_INSTALL:           ${RESTINIO_INSTALL}")
 message(STATUS "RESTINIO_TEST:              ${RESTINIO_TEST}")
@@ -153,80 +163,52 @@ endif ()
 # Define dependencies.
 message(STATUS "Defining RESTinio dependencies...")
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-if (RESTINIO_ASIO_SOURCE STREQUAL "standalone")
-    if (RESTINIO_DEP_STANDALONE_ASIO STREQUAL "find")
-        message(STATUS "Finding ASIO package...")
-        set(RESTINIO_ASIO_PATH_HINT ${CMAKE_CURRENT_SOURCE_DIR}/asio)
-        find_package(asio REQUIRED)
-        if (NOT asio_FOUND)
-            message(FATAL_ERROR "Unable to find ASIO")
-        endif()
-    endif ()
-else ()
-    if (RESTINIO_DEP_BOOST_ASIO STREQUAL "find")
-        find_package(Boost REQUIRED)
-        find_package(Boost REQUIRED COMPONENTS regex)
-    endif ()
-endif ()
+include(CPM)
 
-if (RESTINIO_DEP_LLHTTP STREQUAL "find")
-    find_package(llhttp REQUIRED)
-elseif (RESTINIO_DEP_LLHTTP STREQUAL "local")
-    message("========================================")
-    message(STATUS "Add subdirectory nodejs/llhttp")
-    add_subdirectory(nodejs/llhttp)
-    message("========================================")
-endif ()
+cpmaddpackage(
+      NAME
+      asiocmake
+      VERSION
+      1.2.1
+      GITHUB_REPOSITORY
+      "maztheman/asio.cmake"
+      GIT_TAG main
+      OPTIONS
+      "ASIO_USE_CPM ON"
+      "ASIO_TAG asio-1-28-2")
 
-if (RESTINIO_DEP_FMT STREQUAL "find")
-    find_package(fmt REQUIRED)
-elseif (RESTINIO_DEP_FMT STREQUAL "local")
-    message("========================================")
-    message(STATUS "Add subdirectory fmt")
-    add_subdirectory(fmt)
-    message("========================================")
-endif ()
+cpmaddpackage(
+    NAME llhttp
+    VERSION 9.2.1
+    URL https://github.com/nodejs/llhttp/archive/refs/tags/release/v9.2.1.tar.gz
+    OPTIONS
+    "BUILD_SHARED_LIBS OFF"
+    "BUILD_STATIC_LIBS ON"
+)
 
-if (RESTINIO_DEP_EXPECTED_LITE STREQUAL "find")
-    find_package(expected-lite REQUIRED)
-elseif (RESTINIO_DEP_EXPECTED_LITE STREQUAL "local")
-    message("========================================")
-    message(STATUS "Add subdirectory expected-lite")
-    add_subdirectory(expected-lite)
-    message("========================================")
-endif ()
+cpmaddpackage("gh:fmtlib/fmt#10.2.1")
 
-if (RESTINIO_WITH_SOBJECTIZER)
-    message("========================================")
-    if (RESTINIO_DEP_SOBJECTIZER STREQUAL "local")
-        message(STATUS "Add subdirectory so_5")
-        SET(SOBJECTIZER_BUILD_STATIC ON)
-        add_subdirectory(so_5)
+cpmaddpackage(
+        NAME expected-lite
+        VERSION 0.8.0
+        GITHUB_REPOSITORY martinmoene/expected-lite
+        OPTIONS
+        "BUILD_SHARED_LIBS OFF"
+        "BUILD_STATIC_LIBS ON"
+)
 
-        set(RESTINIO_SOBJECTIZER_LIB_LINK_NAME "sobjectizer::StaticLib")
-    elseif (RESTINIO_DEP_SOBJECTIZER STREQUAL "find")
-        find_package(sobjectizer CONFIG REQUIRED)
-
-        set(RESTINIO_SOBJECTIZER_LIB_LINK_NAME "sobjectizer::StaticLib")
-    elseif (RESTINIO_DEP_SOBJECTIZER STREQUAL "system")
-        if (NOT RESTINIO_SOBJECTIZER_LIB_LINK_NAME)
-            message(FATAL_ERROR "The RESTINIO_SOBJECTIZER_LIB_LINK_NAME has to be "
-                "specified explicitly when RESTINIO_DEP_SOBJECTIZER is 'system'")
-        endif()
-    endif()
-
-    message(STATUS "RESTINIO_SOBJECTIZER_LIB_LINK_NAME: ${RESTINIO_SOBJECTIZER_LIB_LINK_NAME}")
-    message("========================================")
-endif ()
-
-if (RESTINIO_TEST OR RESTINIO_SAMPLE OR RESTINIO_BENCHMARK)
-    message("========================================")
-    message("adding restinio-helpers")
-    add_subdirectory(restinio-helpers)
-    message("========================================")
-endif()
+cpmaddpackage(
+        NAME so-5
+        VERSION 5.8.2
+        GITHUB_REPOSITORY maztheman/sobjectizer
+        GIT_TAG master
+        OPTIONS
+        "SOBJECTIZER_BUILD_SHARED OFF"
+        "SOBJECTIZER_BUILD_STATIC ON"
+)
 
 find_package(ZLIB)
 if (ZLIB_FOUND)
@@ -331,22 +313,20 @@ message(STATUS "Defining restinio target...")
 add_subdirectory(restinio)
 message("========================================")
 
+if(NOT PROJECT_IS_TOP_LEVEL)
+    return()
+endif()
+
+if (RESTINIO_TEST OR RESTINIO_SAMPLE OR RESTINIO_BENCHMARK)
+    message("========================================")
+    message("adding restinio-helpers")
+    add_subdirectory(restinio-helpers)
+    message("========================================")
+endif()
+
 if (RESTINIO_TEST)
-    if (RESTINIO_DEP_CATCH2 STREQUAL "find")
-        find_package(Catch2 REQUIRED)
-    elseif (RESTINIO_DEP_CATCH2 STREQUAL "local")
-        message("========================================")
-        message(STATUS "Add subdirectory catch2")
-        set(CATCH_INSTALL_DOCS      OFF)
-        set(CATCH_INSTALL_EXTRAS    OFF)
-        set(CATCH_DEVELOPMENT_BUILD OFF)
-        set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
-        add_subdirectory(catch2)
-
-        set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/catch2/extras)
-        message("========================================")
-    endif ()
-
+    CPMAddPackage("gh:catchorg/Catch2@3.5.0")
+    list(APPEND CMAKE_MODULE_PATH "${Catch2_SOURCE_DIR}/extras")
     include(Catch)
 
     enable_testing()

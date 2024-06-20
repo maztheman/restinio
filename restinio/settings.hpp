@@ -669,7 +669,7 @@ class basic_server_settings_t
 		 *
 		 * Usage example:
 		 * @code
-		 * auto actual_ip = asio::ip::address::from_string(app.config().ip_addr());
+		 * auto actual_ip = asio::ip::make_address(app.config().ip_addr());
 		 * ...
 		 * using my_server_t = restinio::http_server_t< my_server_traits_t >;
 		 * my_server_t server{
@@ -695,7 +695,7 @@ class basic_server_settings_t
 		 *
 		 * Usage example:
 		 * @code
-		 * auto actual_ip = asio::ip::address::from_string(app.config().ip_addr());
+		 * auto actual_ip = asio::ip::make_address(app.config().ip_addr());
 		 * ...
 		 * restinio::run(
 		 * 	restinio::on_this_thread()
@@ -1571,7 +1571,7 @@ class basic_server_settings_t
 		 * @since v.0.6.12
 		 */
 		Derived &&
-		max_parallel_connections( std::size_t value ) && noexcept 
+		max_parallel_connections( std::size_t value ) && noexcept
 		{
 			return std::move(this->max_parallel_connections( value ));
 		}
